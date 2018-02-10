@@ -4,17 +4,18 @@ using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 using Lab1_ED.DBContext;
+using System.Net;
 
 namespace Lab1_ED.Controllers
 {
     public class PersonaController : Controller
     {
-        DefaultConnection db = DefaultConnection.getInstance;
+        public DefaultConnection db = DefaultConnection.getInstance;
 
         // GET: Persona
         public ActionResult Index()
         {
-            return View(db.Personas.ObtenerListado());
+            return View(db.Personas.ToList());
         }
 
         // GET: Persona/Details/5
@@ -31,41 +32,58 @@ namespace Lab1_ED.Controllers
 
         // POST: Persona/Create
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public ActionResult Create([Bind(Include ="PersonaID, Nombre, Apellido, Edad")]Models.Persona persona)
         {
-            try
+            if (ModelState.IsValid)
             {
-                // TODO: Add insert logic here
-
-                db.Personas.Insertar(persona);
+                persona.PersonaID = ++db.IdActual; //Incrementa el id de la pesona
+                db.Personas.Add(persona);
                 return RedirectToAction("Index");
             }
-            catch
-            {
-                return View();
-            }
+
+            return View(persona);
         }
 
         // GET: Persona/Edit/5
-        public ActionResult Edit(int id)
+        public ActionResult Edit(int? id)
         {
-            return View();
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+
+            Models.Persona persona = db.Personas.Find(x => x.PersonaID == id);
+
+            if (persona == null)
+            {
+                return HttpNotFound();
+            }
+
+            return View(persona);
         }
 
         // POST: Persona/Edit/5
         [HttpPost]
-        public ActionResult Edit(int id, FormCollection collection)
+        [ValidateAntiForgeryToken]
+        public ActionResult Edit([Bind(Include = "PersonaID,Nombre,Apellido,Edad")] Models.Persona persona)
         {
-            try
+            if (ModelState.IsValid)
             {
-                // TODO: Add update logic here
+                Models.Persona modifiedPesona = db.Personas.Find(x => x.PersonaID == persona.PersonaID);
 
-                return RedirectToAction("Index");
+                if (modifiedPesona == null)
+                {
+                    return HttpNotFound();
+                }
+
+                modifiedPesona.Nombre = persona.Nombre;
+                modifiedPesona.Apellido = persona.Apellido;
+                modifiedPesona.Edad = persona.Edad;                     
+                return View(modifiedPesona);
             }
-            catch
-            {
-                return View();
-            }
+
+            return RedirectToAction("Index");
         }
 
         // GET: Persona/Delete/5
